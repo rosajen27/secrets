@@ -5,7 +5,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 const app = express();
 
@@ -43,25 +44,29 @@ app.get("/register", function (req, res) {
 
 // Post new user credentials on register route
 app.post("/register", function (req, res) {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5("req.body.password")
+
+    bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        });
+
+        // if no errors, render the secrets page
+        newUser.save(function (err) {
+            if (err) {
+                console.log(err)
+            } else {
+                res.render("secrets");
+            }
+        });
     });
 
-    // if no errors, render the secrets page
-    newUser.save(function (err) {
-        if (err) {
-            console.log(err)
-        } else {
-            res.render("secrets");
-        }
-    });
 });
 
 // check to see if we have a user with the credentials that we put in
 app.post("/login", function (req, res) {
     const username = req.body.username;
-    const password = md5("req.body.password");
+    const password = req.body.password;
 
     // check them against the database
     User.findOne({ email: username }, function (err, foundUser) {
@@ -69,9 +74,11 @@ app.post("/login", function (req, res) {
             console.log(err);
         } else {
             if (foundUser) {
-                if (foundUser.password === password) {
-                    res.render("secrets");
-                }
+                bcrypt.compare(password, foundUser.password, function (err, result) {
+                    if (result === true) {
+                        res.render("secrets");
+                    }
+                });
             }
         }
     });
