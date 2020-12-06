@@ -29,7 +29,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // connect to mongodb
-mongoose.connect(process.env.URL, { useNewUrlParser: true });
+
+mongoose.connect("mongodb+srv://<username>:<password></password>@cluster0.e0jml.mongodb.net/<database-name>?retryWrites=true&w=majority", { useNewUrlParser: true });
 
 mongoose.set("useCreateIndex", true);
 
