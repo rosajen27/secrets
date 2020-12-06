@@ -30,7 +30,7 @@ app.use(passport.session());
 
 // connect to mongodb
 
-mongoose.connect("mongodb+srv://admin:root@cluster0.e0jml.mongodb.net/userDB?retryWrites=true&w=majority", { useNewUrlParser: true });
+mongoose.connect("mongodb+srv://" + process.env.USER + ":" + process.env.PASSWORD + "@cluster0.e0jml.mongodb.net/" + process.env.DBNAME + "?retryWrites=true&w=majority", { useNewUrlParser: true });
 
 mongoose.set("useCreateIndex", true);
 
