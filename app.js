@@ -29,7 +29,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // connect to mongodb
-mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true });
+mongoose.connect(process.env.URL, { useNewUrlParser: true });
 
 mongoose.set("useCreateIndex", true);
 
@@ -37,7 +37,8 @@ mongoose.set("useCreateIndex", true);
 // object created from mongoose schema class
 const userSchema = new mongoose.Schema({
     email: String,
-    password: String
+    password: String,
+    secret: String
 });
 
 // add passport-local-mongoose plugin 
@@ -66,13 +67,50 @@ app.get("/register", function (req, res) {
 });
 
 app.get("/secrets", function (req, res) {
-    // check if the user is authenticated before rendering secrets page
-    // if not, redirect user to the log in page
+
+    User.find({ "secret": { $ne: null } }, function (err, foundUsers) {
+        if (err) {
+            console.log(err)
+        } else {
+            if (foundUsers) {
+                res.render("secrets", { usersWithSecrets: foundUsers });
+            }
+        }
+    });
+});
+
+app.get("/submit", function (req, res) {
+    // check to see if user is logged in
+    // if they are, render submit page
     if (req.isAuthenticated()) {
-        res.render("secrets");
+        res.render("submit");
     } else {
         res.redirect("/login");
     }
+});
+
+app.post("/submit", function (req, res) {
+    // save the secret the user typed in
+    const submittedSecret = req.body.secret;
+
+    // find current user in DB & save secret into their file
+    User.findById(req.user.id, function (err, foundUser) {
+        if (err) {
+            console.log(err);
+        } else {
+            // if no errors and if the user exists, 
+            // set the found user secret field to equal submitted secret
+            // then save this user with newly updated secret
+            // then redirect to secrets page
+            if (foundUser) {
+                foundUser.secret = submittedSecret;
+                foundUser.save(function () {
+                    res.redirect("/secrets");
+                });
+            }
+        }
+    });
+
 });
 
 app.get("/logout", function (req, res) {
@@ -122,6 +160,6 @@ app.post("/login", function (req, res) {
 
 });
 
-app.listen(3000, function () {
+app.listen(process.env.PORT || 3000, function () {
     console.log("Server started on port 3000.");
 });
