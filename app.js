@@ -30,7 +30,7 @@ app.use(passport.session());
 
 // connect to mongodb
 
-mongoose.connect("mongodb+srv://<username>:<password></password>@cluster0.e0jml.mongodb.net/<database-name>?retryWrites=true&w=majority", { useNewUrlParser: true });
+mongoose.connect("mongodb+srv://admin:root@cluster0.e0jml.mongodb.net/userDB?retryWrites=true&w=majority", { useNewUrlParser: true });
 
 mongoose.set("useCreateIndex", true);
 
@@ -71,7 +71,7 @@ app.get("/secrets", function (req, res) {
     if (req.isAuthenticated()) {
         User.find({ "secret": { $ne: null } }, function (err, foundUsers) {
             if (err) {
-                console.log(err)
+                console.log(err);
             } else {
                 if (foundUsers) {
                     res.render("secrets", { usersWithSecrets: foundUsers });
@@ -79,7 +79,7 @@ app.get("/secrets", function (req, res) {
             }
         });
     } else {
-        red.redirect("/login");
+        res.redirect("/login");
     }
 });
 
