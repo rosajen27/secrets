@@ -8,6 +8,8 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const findOrCreate = require("mongoose-findorcreate");
 
 const app = express();
 
@@ -28,9 +30,23 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// OAuth with Googlenp
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets",
+    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate({ googleID: profile.id }, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
+
 // connect to mongodb
 
-mongoose.connect("mongodb+srv://" + process.env.USER + ":" + process.env.PASSWORD + "@cluster0.e0jml.mongodb.net/" + process.env.DBNAME + "?retryWrites=true&w=majority", { useNewUrlParser: true });
+mongoose.connect("mongodb+srv://" + process.env.USER + ":" + process.env.PASSWORD + "@cluster0.e0jml.mongodb.net/" + process.env.DBNAME + "?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true });
 
 mongoose.set("useCreateIndex", true);
 
@@ -39,25 +55,49 @@ mongoose.set("useCreateIndex", true);
 const userSchema = new mongoose.Schema({
     email: String,
     password: String,
-    secret: String
+    secret: String,
+    googleID: String
 });
 
 // add passport-local-mongoose plugin 
 // to hash and salt passwords and save users to database
 userSchema.plugin(passportLocalMongoose);
+// find or create npm package
+userSchema.plugin(findOrCreate);
 
 // use userschema to set up new user model
 const User = new mongoose.model("User", userSchema);
 
 // passport-local configuration
 passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+
+
+passport.serializeUser(function (user, done) {
+    done(null, user.id);
+});
+
+passport.deserializeUser(function (id, done) {
+    User.findById(id, function (err, user) {
+        done(err, user);
+    });
+});
 
 // Render Webpages
 app.get("/", function (req, res) {
     res.render("home");
 });
+
+// Google button
+app.get("/auth/google",
+    passport.authenticate("google", { scope: ["profile"] })
+);
+
+app.get("/auth/google/secrets",
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    function (req, res) {
+        res.redirect("/secrets");
+    });
+
 
 app.get("/login", function (req, res) {
     res.render("login");
